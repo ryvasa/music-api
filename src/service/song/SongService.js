@@ -66,6 +66,7 @@ class SongsService {
 
     return result.rows.map(songModel)[0];
   }
+
   async editSongById(id, { title, year, performer, genre, duration, albumId }) {
     const updatedAt = new Date().toISOString();
     const query = {
@@ -79,6 +80,7 @@ class SongsService {
       throw new NotFoundError('Failed to update song. Id not found');
     }
   }
+
   async deleteSongById(id) {
     const query = {
       text: 'DELETE FROM songs WHERE id = $1 RETURNING id',

@@ -3,6 +3,7 @@ const InvariantError = require('../../exceptions/InvariantError');
 const { albumModel } = require('../../utils/AlbumModel');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const { nanoid } = require('nanoid');
+const { songModel } = require('../../utils/SongModel');
 
 class AlbumsService {
   constructor() {
@@ -24,24 +25,23 @@ class AlbumsService {
 
     return result.rows[0].id;
   }
+
   async getAlbumById(id) {
     const query = {
-      text: 'SELECT * FROM albums  WHERE id = $1',
-      values: [id],
-    };
-    const querysong = {
-      text: 'SELECT * FROM songs WHERE "albumId" = $1',
+      text: 'SELECT a.id as "albumId", a.name as "albumName", a.year as "albumYear" ,s.id as id, s.title as title, s.year as year, s.performer as performer, s.genre as genre, s.duration as duration  FROM albums as a LEFT JOIN songs as s ON s."albumId" = a.id WHERE a.id = $1',
       values: [id],
     };
     const result = await this._pool.query(query);
-    const songs = await this._pool.query(querysong);
 
     if (!result.rows.length) {
       throw new NotFoundError('Album not found');
     }
+
+    const songs = result.rows.map(songModel);
+    const album = result.rows.map(albumModel)[0];
     return {
-      ...result.rows.map(albumModel)[0],
-      songs: songs.rows,
+      ...album,
+      songs: !songs[0].id ? [] : songs,
     };
   }
 
@@ -58,6 +58,7 @@ class AlbumsService {
       throw new NotFoundError('Failed to update album. Id not found');
     }
   }
+
   async deleteAlbumById(id) {
     const query = {
       text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
