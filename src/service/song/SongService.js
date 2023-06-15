@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
+const { nanoid } = require('nanoid');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
-const { nanoid } = require('nanoid');
 const { songModel } = require('../../utils/SongModel');
 
 class SongsService {
@@ -10,7 +10,7 @@ class SongsService {
   }
 
   async addSong({ title, year, performer, genre, duration, albumId }) {
-    const id = 'song-' + nanoid(16);
+    const id = `song-${nanoid(16)}`;
     const query = {
       text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
       values: [id, title, year, genre, performer, duration, albumId],
@@ -50,7 +50,7 @@ class SongsService {
     }
 
     const result = await this._pool.query(query);
-    return result.rows.map(songModel);
+    return result.rows;
   }
 
   async getSongById(id) {
@@ -60,7 +60,7 @@ class SongsService {
     };
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Song not found');
     }
 
@@ -76,7 +76,7 @@ class SongsService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Failed to update song. Id not found');
     }
   }
@@ -89,7 +89,7 @@ class SongsService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Failed to delete song. Id not found');
     }
   }

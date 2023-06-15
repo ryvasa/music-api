@@ -1,8 +1,8 @@
 const { Pool } = require('pg');
+const { nanoid } = require('nanoid');
 const InvariantError = require('../../exceptions/InvariantError');
 const { albumModel } = require('../../utils/AlbumModel');
 const NotFoundError = require('../../exceptions/NotFoundError');
-const { nanoid } = require('nanoid');
 const { songModel } = require('../../utils/SongModel');
 
 class AlbumsService {
@@ -11,7 +11,7 @@ class AlbumsService {
   }
 
   async addAlbum({ name, year }) {
-    const id = 'album-' + nanoid(16);
+    const id = `album-${nanoid(16)}`;
     const query = {
       text: 'INSERT INTO albums VALUES($1, $2, $3 ) RETURNING id',
       values: [id, name, year],
@@ -33,7 +33,7 @@ class AlbumsService {
     };
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Album not found');
     }
 
@@ -54,7 +54,7 @@ class AlbumsService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Failed to update album. Id not found');
     }
   }
@@ -67,7 +67,7 @@ class AlbumsService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Failed to delete album. Id not found');
     }
   }
