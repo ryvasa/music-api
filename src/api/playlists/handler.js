@@ -76,15 +76,17 @@ class PlaylistsHandler {
     const { id } = request.params;
     const { id: owner } = request.auth.credentials;
     await this._playlistsService.verifyPlaylistAccess(id, owner);
-    const playlist = await this._playlistsService.getPlaylistSongs(id, owner);
+    const { value, cache } = await this._playlistsService.getPlaylistSongs(id);
 
     const response = h.response({
       status: 'success',
       data: {
-        playlist,
+        playlist: value,
       },
     });
-    response.code(200);
+    if (cache) {
+      response.header('X-Data-Source', 'cache');
+    }
     return response;
   }
 

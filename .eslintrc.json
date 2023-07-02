@@ -12,6 +12,6 @@
   "rules": {
     "no-underscore-dangle": "off",
     "object-curly-newline": "off",
-    "no-console": ["error", { "allow": ["log"] }]
+    "no-console": "off"
   }
 }

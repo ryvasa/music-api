@@ -59,18 +59,14 @@ class UsersService {
     const result = await this._pool.query(query);
 
     if (!result.rowCount) {
-      throw new AuthenticationError(
-        'The credentials you provided are incorrect',
-      );
+      throw new AuthenticationError('The credentials you provided are incorrect');
     }
     const { id, password: hashedPassword } = result.rows[0];
 
     const match = await bcrypt.compare(password, hashedPassword);
 
     if (!match) {
-      throw new AuthenticationError(
-        'The credentials you provided are incorrect',
-      );
+      throw new AuthenticationError('The credentials you provided are incorrect');
     }
     return id;
   }

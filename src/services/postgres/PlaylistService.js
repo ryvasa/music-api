@@ -7,9 +7,10 @@ const { songModel } = require('../../utils/SongModel');
 const { activityModel } = require('../../utils/ActivityModel');
 
 class PlaylistsService {
-  constructor(collaborationService) {
+  constructor(collaborationService, cacheService) {
     this._pool = new Pool();
     this._collaborationService = collaborationService;
+    this._cacheService = cacheService;
   }
 
   async addPlaylist({ name, owner }) {
@@ -64,6 +65,8 @@ class PlaylistsService {
   }
 
   async addPlaylistSong(playlistId, songId) {
+    await this._cacheService.delete(`playlistSong:${playlistId}`);
+
     const id = `playlist-songs-${nanoid(16)}`;
     const query = {
       text: 'INSERT INTO playlist_songs VALUES($1, $2, $3) RETURNING id',
@@ -79,29 +82,39 @@ class PlaylistsService {
   }
 
   async getPlaylistSongs(id) {
-    const query = {
-      text: 'SELECT p.id as "playlistId", p.name as "playlistName", u.username as username, s.id as id, s.title as title, s.performer as performer FROM playlists as p JOIN users as u ON p.owner = u.id JOIN playlist_songs ps ON p.id = ps.playlist_id JOIN songs as s ON s.id = ps.song_id WHERE p.id = $1',
-      values: [id],
-    };
-    const result = await this._pool.query(query);
+    try {
+      const cache = await this._cacheService.get(`playlistSong:${id}`);
+      return { value: JSON.parse(cache), cache: true };
+    } catch (error) {
+      const query = {
+        text: 'SELECT p.id as "playlistId", p.name as "playlistName", u.username as username, s.id as id, s.title as title, s.performer as performer FROM playlists as p JOIN users as u ON p.owner = u.id JOIN playlist_songs ps ON p.id = ps.playlist_id JOIN songs as s ON s.id = ps.song_id WHERE p.id = $1',
+        values: [id],
+      };
+      const result = await this._pool.query(query);
 
-    if (!result.rowCount) {
-      throw new NotFoundError('Playlist not found');
+      if (!result.rowCount) {
+        throw new NotFoundError('Playlist not found');
+      }
+
+      const songs = result.rows.map(songModel);
+      const playlist = {
+        id: result.rows[0].playlistId,
+        name: result.rows[0].playlistName,
+        username: result.rows[0].username,
+      };
+      const response = {
+        ...playlist,
+        songs,
+      };
+      await this._cacheService.set(`playlistSong:${id}`, JSON.stringify(response));
+
+      return { value: response, cache: false };
     }
-
-    const songs = result.rows.map(songModel);
-    const playlist = {
-      id: result.rows[0].playlistId,
-      name: result.rows[0].playlistName,
-      username: result.rows[0].username,
-    };
-    return {
-      ...playlist,
-      songs,
-    };
   }
 
   async deletePlaylistSong(id, songId) {
+    await this._cacheService.delete(`playlistSong:${id}`);
+
     const query = {
       text: 'DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id',
       values: [id, songId],
